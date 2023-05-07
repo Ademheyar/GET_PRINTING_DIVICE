@@ -60,12 +60,24 @@ def print_text_with_dialog(text):
             
             print("Send the text to the printer\n")
             # Send the text to the printer
-            twiths = (text + ".\n.\n.\n.\n.\n.\n")
+            twiths = (text + ".\n.\n")
             win32print.WritePrinter(printer_handle, twiths.encode("utf-8"))
-            
-            print("End the page\n")
-            # End the page
-            win32print.EndPagePrinter(printer_handle)
+
+
+ 
+            # Send a paper-cut command to the printer
+            # You may need to adjust the command based on the printer model
+            print("Send a paper-cut command to the printere\n")
+            print("You may need to adjust the command based on the printer model\n")
+            paper_cut_command = b'\x1D\x56\x01'
+            win32print.WritePrinter(printer_handle, paper_cut_command)
+
+            # Send a command to open the cash drawer
+            # Adjust the command based on the printer and cash drawer model
+            print("Send a command to open the cash drawer\n")
+            print("You may need to adjust the command based on the printer model\n")
+            cash_drawer_command = b'\x1B\x70\x00\x19\xFA'
+            win32print.WritePrinter(printer_handle, cash_drawer_command)
 
         finally:
             print("End the print job\n")
