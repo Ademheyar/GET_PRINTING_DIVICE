@@ -1,14 +1,11 @@
-import tkinter as tk
 import win32print
-import time
-import ctypes
+import tkinter as tk
 
-# Create the main window
+# Create a hidden Tkinter root window
 root = tk.Tk()
-root.title("Printer Selection")
+root.withdraw()
 
-# Initialize printer variable
-printer_name = None
+printer_name = ""
 
 # Function to choose a printer driver and save the choice
 def choose_printer():
@@ -27,68 +24,84 @@ def choose_printer():
         printer_menu.destroy()
     ok_button = tk.Button(root, text="OK", command=save_printer)
     ok_button.pack(pady=10)
-  
-def wait_for_printer_ready(printer_name, timeout=30, max_attempts=10):
-    attempts = 0
-    while attempts < max_attempts:
-        printer_handle = win32print.OpenPrinter(printer_name)
-        printer_info = win32print.GetPrinter(printer_handle, 2)
-        win32print.ClosePrinter(printer_handle)
-        print("printer status : " + str(printer_info))
-        print("printer status : " + str(win32print.PRINTER_STATUS_PAUSED))
-        print("printer status : " + str(win32print.PRINTER_STATUS_OFFLINE))
-        print("printer status : " + str(win32print.PRINTER_ATTRIBUTE_WORK_OFFLINE))
-        if printer_info['Status'] == win32print.PRINTER_STATUS_PAUSED or printer_info['Status'] == 0:
-            return True
-        if printer_info['Status'] == win32print.PRINTER_STATUS_OFFLINE:
-            win32print.SetPrinter(printer_name, None, {'Attributes': printer_info.Attributes & ~win32print.PRINTER_ATTRIBUTE_WORK_OFFLINE})
-        time.sleep(1)
-        attempts += 1
-    # Printer is still offline after maximum number of attempts
-    print(f"Error: Printer '{printer_name}' is offline and could not be brought online.")
-    return False
 
-# Function to print the entry value using the selected printer driver
-def print_entry():
+    
+def print_text_with_dialog(text):
+    choose_printer()
     # Load the saved printer driver choice
     with open('printer.txt', 'r') as f:
         printer_name = f.read().strip()
-    wait_for_printer_ready(printer_name)
-    print("printer_name|" + str(printer_name) + "|")
-    # Print the entry value using the saved printer driver
+    # Get the default printer name
+    #printer_name = win32print.GetDefaultPrinter()
+
+    # Prepare the printer properties
+    printer_props = {
+        "DesiredAccess": win32print.PRINTER_ALL_ACCESS,
+        "PrinterName": printer_name,
+        "Attributes": win32print.PRINTER_ATTRIBUTE_DIRECT,
+    }
+
+    # Open the printer and get a handle to it
+    print("Open the printer and get a handle to it\n")
     printer_handle = win32print.OpenPrinter(printer_name)
-    data = entry.get()
-    job_id = win32print.StartDocPrinter(printer_handle, 1, ('print', None, 'RAW'))
-    job_info = win32print.JOB_INFO_1
-    
-    win32print.WritePrinter(printer_handle, data.encode())
-    win32print.FlushPrinter(printer_handle, b"", 1)
-    win32print.EndPagePrinter(printer_handle)
-    win32print.EndDocPrinter(printer_handle)
-    win32print.ClosePrinter(printer_handle)
-    print("printer job_info : " + str(job_info))
-    print("printer status : " + str(win32print.JOB_STATUS_COMPLETE))
-    # Wait for the printer to become ready again
-    '''while True:
-        win32print.GetJob(printer_handle, job_id, 1, ctypes.byref(job_info))
-        if job_info.Status == win32print.JOB_STATUS_COMPLETE:
-            break
-        time.sleep(1)'''
-      
+    try:
+        print("Prepare the document info\n")
+        # Prepare the document info
+        doc_info = ('print', None, 'RAW')
+        
+        print("Start the print job\n")
+        # Start the print job
+        job_handle = win32print.StartDocPrinter(printer_handle, 1, doc_info)
 
-# Create the entry widget
-entry = tk.Entry(root, width=50)
-entry.pack(pady=10)
+        try:
+            print("Start a new page\n")
+            # Start a new page
+            win32print.StartPagePrinter(printer_handle)
+            
+            print("Send the text to the printer\n")
+            # Send the text to the printer
+            twiths = (text + ".\n.\n.\n.\n.\n.\n")
+            win32print.WritePrinter(printer_handle, twiths.encode("utf-8"))
+            
+            print("End the page\n")
+            # End the page
+            win32print.EndPagePrinter(printer_handle)
 
+        finally:
+            print("End the print job\n")
+            # End the print job
+            win32print.EndDocPrinter(printer_handle)
 
-# Create the first button to choose a printer driver
-printer_name = tk.StringVar()
-choose_printer_button = tk.Button(root, text="Choose Printer", command=choose_printer)
-choose_printer_button.pack()
+    finally:
+        print("Close the printer handle\n")
+        # Close the printer handle
+        win32print.ClosePrinter(printer_handle)
 
-# Create the second button to print the entry value using the selected printer driver
-print_button = tk.Button(root, text="Print Entry", command=print_entry)
-print_button.pack(pady=10)
+# Example usage
+text_to_print = \
+              "     Company name\n" + \
+              "----------------------\n"\
+              "Receipt No. : ??????\n" + \
+              "YEAR-MONTH-DAY TIME PM\AM\n" + \
+              "USER: \n" + \
+              "CUSTEMER: \n" + \
+              "-----------------------\n" + \
+              "Items       QTY        PRICE\n" + \
+              "Item0       2          0\n" + \
+              "Item1       1          1\n" + \
+              "Item2       1          1\n" + \
+              "-----------------------\n" + \
+              "TOTAL Items            3\n" + \
+              "TOTAL price            2\n" + \
+              "-----------------------\n" + \
+              "paid amount:           2\n" + \
+              "amount due:            2\n" + \
+              "-----------------------\n" + \
+              "thank you for shoping with us\n"
+
+# Call the function to print the text with the printer driver dialog
+print_text_with_dialog(text_to_print)
+
 
 # Start the main loop
 root.mainloop()
